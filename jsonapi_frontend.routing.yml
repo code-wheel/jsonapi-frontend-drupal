@@ -1,0 +1,17 @@
+jsonapi_frontend.resolve:
+  path: '/jsonapi/resolve'
+  defaults:
+    _controller: '\Drupal\jsonapi_frontend\Controller\PathResolverController::resolve'
+  requirements:
+    # Allow anonymous access - entity access is checked in code.
+    _access: 'TRUE'
+    _format: 'json'
+  methods: [GET]
+
+jsonapi_frontend.settings:
+  path: '/admin/config/services/jsonapi-frontend'
+  defaults:
+    _form: '\Drupal\jsonapi_frontend\Form\SettingsForm'
+    _title: 'JSON:API Frontend'
+  requirements:
+    _permission: 'administer jsonapi frontend'

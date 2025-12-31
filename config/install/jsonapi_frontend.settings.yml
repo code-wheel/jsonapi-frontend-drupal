@@ -1,0 +1,84 @@
+# Default configuration for JSON:API Frontend.
+#
+# By default, all content is enabled for headless rendering.
+# Configure specific bundles/views at /admin/config/services/jsonapi-frontend
+
+# --- Deployment Configuration ---
+
+# Deployment mode determines how traffic flows between Drupal and the frontend.
+#
+# 'split_routing' - Drupal stays on main domain. External router (CDN/nginx)
+#                   directs specific paths to your frontend. Use this for
+#                   gradual migration without DNS changes.
+#
+# 'nextjs_first' - Frontend (Next.js) handles all traffic on main domain.
+#                  Non-headless content is proxied to Drupal origin.
+#                  Best performance, requires DNS change.
+deployment_mode: 'split_routing'
+
+# The Drupal base URL.
+# For split_routing: Used to generate drupal_url for non-headless content.
+# For nextjs_first: The origin URL where Drupal is accessible (e.g., cms.example.com).
+# Leave empty to use the current site's base URL.
+drupal_base_url: ''
+
+# Proxy secret for origin protection (nextjs_first mode only).
+# When set, Drupal will reject direct requests that don't include this secret.
+# The frontend sends this as X-Proxy-Secret header.
+# Leave empty to disable origin protection (not recommended for production).
+proxy_secret: ''
+
+# --- Resolver Configuration ---
+
+# Cache max-age for the resolver endpoint (/jsonapi/resolve) in seconds.
+# 0 disables caching (Cache-Control: no-store).
+#
+# This cache is only applied for anonymous requests to avoid leaking
+# access-controlled routing data across users.
+resolver:
+  cache_max_age: 0
+  # Default language to use when the resolver request doesn't include langcode.
+  # - site_default: Use the site's default language (deterministic).
+  # - current: Use the current (negotiated) content language.
+  langcode_fallback: 'site_default'
+
+# --- Entity Configuration ---
+
+# Whether to enable all entity bundles by default.
+# If true, the headless_bundles setting is ignored and all entities are headless.
+enable_all: true
+
+# Specific entity bundles enabled for headless rendering.
+# Format: entity_type:bundle (e.g., node:article, taxonomy_term:tags)
+# Only used when enable_all is false.
+headless_bundles: []
+
+# --- Views Configuration ---
+
+# Whether to enable all Views by default.
+# If true, the headless_views setting is ignored and all Views are headless.
+# Note: Views support requires the jsonapi_views module to be installed.
+enable_all_views: true
+
+# Specific Views enabled for headless rendering.
+# Format: view_id:display_id (e.g., blog:page_1, events:page_1)
+# Only used when enable_all_views is false.
+headless_views: []
+
+# --- Cache Revalidation Configuration ---
+
+# Cache revalidation allows instant cache invalidation when content changes.
+# When enabled, Drupal sends a webhook to your frontend's /api/revalidate
+# endpoint with cache tags for the changed content.
+revalidation:
+  # Whether to enable cache revalidation webhooks.
+  enabled: false
+
+  # The URL of your frontend's revalidation endpoint.
+  # Example: https://your-frontend.com/api/revalidate
+  url: ''
+
+  # Shared secret for authenticating webhook requests.
+  # The frontend should validate the X-Revalidation-Secret header.
+  # Leave empty to generate automatically when enabling revalidation.
+  secret: ''

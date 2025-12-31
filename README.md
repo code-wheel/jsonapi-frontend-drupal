@@ -1,0 +1,108 @@
+# JSON:API Frontend
+
+`jsonapi_frontend` is a minimal Drupal module that makes JSON:API frontend-ready by adding a **path → JSON:API URL** resolver endpoint.
+
+- Resolve frontend paths (including aliases) to JSON:API resource URLs
+- Hybrid headless: choose what your frontend renders vs what stays on Drupal
+- Optional Views support via `jsonapi_views`
+- Optional cache revalidation webhooks for frontend caches (Next.js, etc.)
+
+## Requirements
+
+- Drupal 10 or 11
+- Core modules: JSON:API, Path Alias
+
+Optional:
+- [`jsonapi_views`](https://www.drupal.org/project/jsonapi_views) (Views support)
+
+## Install
+
+```bash
+composer require drupal/jsonapi_frontend
+drush en jsonapi_frontend
+```
+
+## Try it
+
+```bash
+curl "https://your-site.com/jsonapi/resolve?path=/about-us&_format=json"
+```
+
+Typical successful entity resolution looks like:
+
+```json
+{
+  "resolved": true,
+  "kind": "entity",
+  "jsonapi_url": "/jsonapi/node/page/…",
+  "headless": true
+}
+```
+
+## Frontend usage
+
+### Option A: TypeScript client (optional)
+
+```bash
+npm i @codewheel-ai/jsonapi-frontend-client
+```
+
+```ts
+import { resolvePath, fetchJsonApi } from "@codewheel-ai/jsonapi-frontend-client"
+
+const resolved = await resolvePath("/about-us")
+if (resolved.resolved && resolved.kind === "entity") {
+  const doc = await fetchJsonApi(resolved.jsonapi_url)
+  console.log(doc.data)
+}
+```
+
+### Option B: Call the endpoint directly
+
+```ts
+const resolved = await fetch(`${DRUPAL_BASE_URL}/jsonapi/resolve?path=${path}&_format=json`).then((r) => r.json())
+if (resolved.resolved && resolved.kind === "entity") {
+  const doc = await fetch(`${DRUPAL_BASE_URL}${resolved.jsonapi_url}`).then((r) => r.json())
+}
+```
+
+### Next.js starter (optional)
+
+For a complete reference implementation (routing + rendering + media helpers), use the Next.js starter:
+https://github.com/CodeWheel-AI/jsonapi-frontend-next
+
+## Configuration
+
+Configure at `/admin/config/services/jsonapi-frontend`.
+
+Typical settings:
+- Deployment mode (Split routing vs frontend-first)
+- Drupal URL / origin + optional proxy secret
+- Resolver cache max-age (anonymous-only)
+- Resolver langcode fallback (`site_default` or `current`)
+- Headless-enabled bundles (entities) and View displays
+
+For deployment and migration examples, see `MIGRATION.md`.
+
+## Supported content
+
+- **Entities:** any canonical content entity route exposed by JSON:API (nodes, terms, media, users, and custom entities)
+- **Views:** page displays with paths (requires `jsonapi_views`)
+
+## Security notes
+
+- The resolver respects entity access; unpublished/restricted content resolves as “not found”.
+- The endpoint lives under `/jsonapi/` so it can share the same perimeter rules you apply to JSON:API.
+- If you run “frontend-first”, you can protect the Drupal origin with a shared secret header.
+
+## Not included (by design)
+
+- Preview/draft mode (use `drupal/next` if you need it)
+- Multi-site orchestration
+
+## Links
+
+- Migration guide: `MIGRATION.md`
+- Changelog: `CHANGELOG.md`
+- NPM client: https://www.npmjs.com/package/@codewheel-ai/jsonapi-frontend-client
+- Starter: https://github.com/CodeWheel-AI/jsonapi-frontend-next

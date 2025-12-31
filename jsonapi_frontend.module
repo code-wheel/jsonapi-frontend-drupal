@@ -1,0 +1,122 @@
+<?php
+
+/**
+ * @file
+ * Hook implementations for JSON:API Frontend module.
+ */
+
+declare(strict_types=1);
+
+use Drupal\Core\Entity\ContentEntityInterface;
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\jsonapi_frontend\Event\HeadlessContentChangedEvent;
+
+/**
+ * Implements hook_entity_insert().
+ */
+function jsonapi_frontend_entity_insert(EntityInterface $entity): void {
+  _jsonapi_frontend_dispatch_content_event($entity, 'insert');
+}
+
+/**
+ * Implements hook_entity_update().
+ */
+function jsonapi_frontend_entity_update(EntityInterface $entity): void {
+  _jsonapi_frontend_dispatch_content_event($entity, 'update');
+}
+
+/**
+ * Implements hook_entity_delete().
+ */
+function jsonapi_frontend_entity_delete(EntityInterface $entity): void {
+  _jsonapi_frontend_dispatch_content_event($entity, 'delete');
+}
+
+/**
+ * Dispatches content changed event for headless entities.
+ *
+ * @param \Drupal\Core\Entity\EntityInterface $entity
+ *   The entity that changed.
+ * @param string $operation
+ *   The operation: 'insert', 'update', or 'delete'.
+ */
+function _jsonapi_frontend_dispatch_content_event(EntityInterface $entity, string $operation): void {
+  // Only dispatch for headless-enabled entities.
+  if (!_jsonapi_frontend_is_entity_headless($entity)) {
+    return;
+  }
+
+  // Only dispatch for published entities (or for delete operations).
+  if ($operation !== 'delete' && method_exists($entity, 'isPublished') && !$entity->isPublished()) {
+    return;
+  }
+
+  // Build cache tags.
+  $entity_type_id = $entity->getEntityTypeId();
+  $bundle = $entity->bundle();
+  $uuid = $entity->uuid();
+
+  $tags = [
+    'drupal',
+    "type:{$entity_type_id}--{$bundle}",
+    "bundle:{$bundle}",
+    "{$entity_type_id}:{$uuid}",
+    "uuid:{$uuid}",
+  ];
+
+  // Build paths.
+  $paths = [];
+  if ($entity->hasLinkTemplate('canonical')) {
+    try {
+      $url = $entity->toUrl('canonical');
+      $paths[] = $url->toString();
+    }
+    catch (\Exception $e) {
+      // Entity may not have a canonical URL - this is expected for some entity types.
+      \Drupal::logger('jsonapi_frontend')->debug('Could not get canonical URL for @type @uuid: @message', [
+        '@type' => $entity_type_id,
+        '@uuid' => $uuid,
+        '@message' => $e->getMessage(),
+      ]);
+    }
+  }
+
+  // Dispatch the event.
+  $event = new HeadlessContentChangedEvent($entity, $operation, $paths, $tags);
+
+  /** @var \Symfony\Contracts\EventDispatcher\EventDispatcherInterface $dispatcher */
+  $dispatcher = \Drupal::service('event_dispatcher');
+  $dispatcher->dispatch($event, HeadlessContentChangedEvent::EVENT_NAME);
+}
+
+/**
+ * Checks if an entity is configured as headless.
+ *
+ * @param \Drupal\Core\Entity\EntityInterface $entity
+ *   The entity to check.
+ *
+ * @return bool
+ *   TRUE if the entity is headless-enabled, FALSE otherwise.
+ */
+function _jsonapi_frontend_is_entity_headless(EntityInterface $entity): bool {
+  // Only content entities with canonical routes can be resolved headlessly.
+  if (!$entity instanceof ContentEntityInterface || !$entity->hasLinkTemplate('canonical')) {
+    return FALSE;
+  }
+
+  $entity_type_id = $entity->getEntityTypeId();
+
+  $config = \Drupal::config('jsonapi_frontend.settings');
+
+  // If enable_all is true, all supported entities are headless.
+  if ($config->get('enable_all')) {
+    return TRUE;
+  }
+
+  // Check if this specific bundle is enabled.
+  $bundle = $entity->bundle();
+  $bundle_key = "{$entity_type_id}:{$bundle}";
+  $enabled_bundles = $config->get('headless_bundles') ?: [];
+
+  return in_array($bundle_key, $enabled_bundles, TRUE);
+}

@@ -1,0 +1,28 @@
+{
+  "name": "drupal/jsonapi_frontend",
+  "type": "drupal-module",
+  "description": "A minimal Drupal module that makes JSON:API frontend-ready. Resolves frontend paths to JSON:API resource URLs for headless frameworks.",
+  "keywords": [
+    "Drupal",
+    "JSON:API",
+    "headless",
+    "decoupled",
+    "Next.js",
+    "frontend"
+  ],
+  "license": "GPL-2.0-or-later",
+  "homepage": "https://www.drupal.org/project/jsonapi_frontend",
+  "support": {
+    "issues": "https://www.drupal.org/project/issues/jsonapi_frontend",
+    "source": "https://git.drupalcode.org/project/jsonapi_frontend"
+  },
+  "require": {
+    "drupal/core": "^10 || ^11"
+  },
+  "extra": {
+    "drupal": {
+      "version": "1.0.0",
+      "datestamp": ""
+    }
+  }
+}

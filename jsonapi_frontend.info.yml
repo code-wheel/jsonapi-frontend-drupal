@@ -1,0 +1,10 @@
+name: 'JSON:API Frontend'
+type: module
+description: 'Makes Drupal JSON:API frontend-ready with clean path resolution for decoupled frontends.'
+core_version_requirement: ^10 || ^11
+package: 'Web services'
+configure: jsonapi_frontend.settings
+lifecycle: stable
+dependencies:
+  - drupal:jsonapi
+  - drupal:path_alias

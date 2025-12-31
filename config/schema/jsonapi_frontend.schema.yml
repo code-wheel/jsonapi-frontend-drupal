@@ -1,0 +1,86 @@
+jsonapi_frontend.settings:
+  type: config_object
+  label: 'JSON:API Frontend settings'
+  mapping:
+    # Deployment mode configuration
+    deployment_mode:
+      type: string
+      label: 'Deployment mode'
+      constraints:
+        Choice:
+          choices:
+            - split_routing
+            - nextjs_first
+          message: 'Deployment mode must be either "split_routing" or "nextjs_first".'
+    drupal_base_url:
+      type: string
+      label: 'Drupal frontend base URL'
+      nullable: true
+    proxy_secret:
+      type: string
+      label: 'Proxy secret for origin protection'
+      nullable: true
+    # Resolver configuration
+    resolver:
+      type: mapping
+      label: 'Resolver settings'
+      mapping:
+        cache_max_age:
+          type: integer
+          label: 'Resolver cache max-age (seconds)'
+          constraints:
+            Range:
+              min: 0
+        langcode_fallback:
+          type: string
+          label: 'Resolver langcode fallback'
+          constraints:
+            Choice:
+              choices:
+                - site_default
+                - current
+              message: 'Langcode fallback must be either "site_default" or "current".'
+    # Entity configuration
+    enable_all:
+      type: boolean
+      label: 'Enable all entity bundles for headless'
+    headless_bundles:
+      type: sequence
+      label: 'Headless-enabled entity bundles'
+      sequence:
+        type: string
+        label: 'Bundle identifier (entity_type:bundle)'
+        constraints:
+          Regex:
+            pattern: '/^[a-z0-9_]+:[a-z0-9_]+$/'
+            message: 'Bundle identifier must be in format "entity_type:bundle".'
+    # Views configuration
+    enable_all_views:
+      type: boolean
+      label: 'Enable all Views for headless'
+    headless_views:
+      type: sequence
+      label: 'Headless-enabled Views'
+      sequence:
+        type: string
+        label: 'View identifier (view_id:display_id)'
+        constraints:
+          Regex:
+            pattern: '/^[a-z_0-9]+:[a-z_0-9]+$/'
+            message: 'View identifier must be in format "view_id:display_id".'
+    # Cache revalidation configuration
+    revalidation:
+      type: mapping
+      label: 'Cache revalidation settings'
+      mapping:
+        enabled:
+          type: boolean
+          label: 'Enable cache revalidation webhooks'
+        url:
+          type: string
+          label: 'Revalidation webhook URL'
+          nullable: true
+        secret:
+          type: string
+          label: 'Revalidation webhook secret'
+          nullable: true

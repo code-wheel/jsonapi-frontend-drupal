@@ -1,0 +1,75 @@
+<?php
+
+/**
+ * @file
+ * Install, update, and uninstall functions for JSON:API Frontend.
+ */
+
+declare(strict_types=1);
+
+/**
+ * Implements hook_requirements().
+ */
+#[\Drupal\Core\Hook\Attribute\LegacyRequirementsHook]
+function jsonapi_frontend_requirements(string $phase): array {
+  $requirements = [];
+
+  if ($phase === 'runtime') {
+    $config = \Drupal::config('jsonapi_frontend.settings');
+
+    // Check if revalidation is enabled but URL is not configured.
+    if ($config->get('revalidation.enabled') && empty($config->get('revalidation.url'))) {
+      $requirements['jsonapi_frontend_revalidation'] = [
+        'title' => t('JSON:API Frontend Cache Revalidation'),
+        'value' => t('Not configured'),
+        'description' => t('Cache revalidation is enabled but no webhook URL is configured. <a href=":url">Configure the webhook URL</a>.', [
+          ':url' => \Drupal\Core\Url::fromRoute('jsonapi_frontend.settings')->toString(),
+        ]),
+        'severity' => REQUIREMENT_WARNING,
+      ];
+    }
+
+    // Check if Next.js First mode is enabled but no proxy secret.
+    if ($config->get('deployment_mode') === 'nextjs_first' && empty($config->get('proxy_secret'))) {
+      $requirements['jsonapi_frontend_proxy_secret'] = [
+        'title' => t('JSON:API Frontend Origin Protection'),
+        'value' => t('Not configured'),
+        'description' => t('Next.js First mode is enabled but no proxy secret is configured. This leaves your Drupal origin unprotected. <a href=":url">Configure a proxy secret</a>.', [
+          ':url' => \Drupal\Core\Url::fromRoute('jsonapi_frontend.settings')->toString(),
+        ]),
+        'severity' => REQUIREMENT_WARNING,
+      ];
+    }
+
+    // Check if jsonapi_views is installed for views support.
+    if (!\Drupal::moduleHandler()->moduleExists('jsonapi_views')) {
+      $requirements['jsonapi_frontend_views'] = [
+        'title' => t('JSON:API Frontend Views Support'),
+        'value' => t('jsonapi_views not installed'),
+        'description' => t('For Views support in your headless frontend, install the <a href=":url">jsonapi_views</a> module.', [
+          ':url' => 'https://www.drupal.org/project/jsonapi_views',
+        ]),
+        'severity' => REQUIREMENT_INFO,
+      ];
+    }
+  }
+
+  return $requirements;
+}
+
+/**
+ * Implements hook_install().
+ */
+function jsonapi_frontend_install(): void {
+  \Drupal::messenger()->addStatus(t('JSON:API Frontend installed. <a href=":url">Configure your headless settings</a>.', [
+    ':url' => \Drupal\Core\Url::fromRoute('jsonapi_frontend.settings')->toString(),
+  ]));
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function jsonapi_frontend_uninstall(): void {
+  // Configuration is automatically deleted by Drupal.
+  \Drupal::messenger()->addStatus(t('JSON:API Frontend has been uninstalled.'));
+}

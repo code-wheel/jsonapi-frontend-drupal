@@ -1,0 +1,6 @@
+jsonapi_frontend.settings:
+  title: 'JSON:API Frontend'
+  description: 'Configure headless content types and frontend settings.'
+  route_name: jsonapi_frontend.settings
+  parent: system.admin_config_services
+  weight: 10

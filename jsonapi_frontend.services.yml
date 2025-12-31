@@ -1,0 +1,31 @@
+services:
+  jsonapi_frontend.path_resolver:
+    class: Drupal\jsonapi_frontend\Service\PathResolver
+    arguments:
+      - '@entity_type.manager'
+      - '@path_alias.manager'
+      - '@path.validator'
+      - '@language_manager'
+      - '@module_handler'
+      - '@config.factory'
+      - '@request_stack'
+
+  jsonapi_frontend.proxy_secret_subscriber:
+    class: Drupal\jsonapi_frontend\EventSubscriber\ProxySecretSubscriber
+    arguments:
+      - '@config.factory'
+    tags:
+      - { name: event_subscriber }
+
+  jsonapi_frontend.revalidation_subscriber:
+    class: Drupal\jsonapi_frontend\EventSubscriber\RevalidationSubscriber
+    arguments:
+      - '@config.factory'
+      - '@http_client'
+      - '@logger.channel.jsonapi_frontend'
+    tags:
+      - { name: event_subscriber }
+
+  logger.channel.jsonapi_frontend:
+    parent: logger.channel_base
+    arguments: ['jsonapi_frontend']

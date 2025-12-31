@@ -1,0 +1,4 @@
+administer jsonapi frontend:
+  title: 'Administer JSON:API Frontend'
+  description: 'Configure headless content settings, deployment mode, and cache revalidation.'
+  restrict access: true
