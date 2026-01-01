@@ -110,6 +110,12 @@ DRUPAL_ORIGIN_URL=https://cms.example.com
 DRUPAL_PROXY_SECRET=your-secret-from-drupal-admin
 ```
 
+## Authentication & caching (optional)
+
+- For best CDN caching, keep `/jsonapi/resolve` + JSON:API public (anonymous) and rely on entity access and published state.
+- If you require authenticated reads, keep credentials server-side and forward the `Authorization` header through your router/proxy. Do not edge-cache auth responses.
+- If you use cookie-based Drupal sessions for writes, you’ll need `X-CSRF-Token` (`/session/token`) plus a strict CORS policy; bearer tokens avoid CSRF.
+
 In this mode the Drupal module enforces the `X-Proxy-Secret` header for most requests, and allows these paths through without the secret:
 - `/jsonapi/*`, `/admin/*`, `/user/*`, `/batch*`, `/system*`
 
