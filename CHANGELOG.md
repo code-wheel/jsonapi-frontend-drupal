@@ -3,6 +3,20 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.4] - 2026-01-01
+
+### Added
+
+- `/jsonapi/routes` secret-protected routes feed (optional) for build-time/SSG route enumeration
+
+### Changed
+
+- Secrets (proxy secret, routes feed secret, revalidation secret) are stored outside config exports by default (state), with optional `settings.php` overrides
+
+### Fixed
+
+- Added an update hook to migrate any existing secrets out of config storage
+
 ## [1.0.3] - 2026-01-01
 
 ### Changed
