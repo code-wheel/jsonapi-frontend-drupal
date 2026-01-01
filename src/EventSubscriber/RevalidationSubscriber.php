@@ -7,6 +7,7 @@ namespace Drupal\jsonapi_frontend\EventSubscriber;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Logger\LoggerChannelInterface;
 use Drupal\jsonapi_frontend\Event\HeadlessContentChangedEvent;
+use Drupal\jsonapi_frontend\Service\SecretManager;
 use GuzzleHttp\ClientInterface;
 use GuzzleHttp\Exception\GuzzleException;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
@@ -35,6 +36,7 @@ final class RevalidationSubscriber implements EventSubscriberInterface {
 
   public function __construct(
     private readonly ConfigFactoryInterface $configFactory,
+    private readonly SecretManager $secretManager,
     private readonly ClientInterface $httpClient,
     private readonly LoggerChannelInterface $logger,
   ) {}
@@ -72,7 +74,7 @@ final class RevalidationSubscriber implements EventSubscriberInterface {
       return;
     }
 
-    $secret = $config->get('revalidation.secret') ?: '';
+    $secret = $this->secretManager->getRevalidationSecret();
 
     // Build the payload.
     $payload = [

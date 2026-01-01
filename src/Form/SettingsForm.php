@@ -10,6 +10,7 @@ use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\jsonapi_frontend\Service\SecretManager;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 /**
@@ -21,6 +22,7 @@ final class SettingsForm extends ConfigFormBase {
     private readonly EntityTypeManagerInterface $entityTypeManager,
     private readonly EntityTypeBundleInfoInterface $bundleInfo,
     private readonly ModuleHandlerInterface $moduleHandler,
+    private readonly SecretManager $secretManager,
   ) {}
 
   public static function create(ContainerInterface $container): self {
@@ -28,6 +30,7 @@ final class SettingsForm extends ConfigFormBase {
       $container->get('entity_type.manager'),
       $container->get('entity_type.bundle.info'),
       $container->get('module_handler'),
+      $container->get('jsonapi_frontend.secret_manager'),
     );
     $instance->setConfigFactory($container->get('config.factory'));
     $instance->setMessenger($container->get('messenger'));
@@ -100,7 +103,10 @@ final class SettingsForm extends ConfigFormBase {
       '#type' => 'password',
       '#title' => $this->t('Proxy Secret'),
       '#description' => $this->t('Shared secret for origin protection. Frontend sends this as <code>X-Proxy-Secret</code> header. Drupal rejects requests without it. <strong>Required for production Next.js First deployments.</strong> Leave empty to keep current value.'),
-      '#placeholder' => $config->get('proxy_secret') ? $this->t('(secret configured - leave empty to keep)') : $this->t('Leave empty to auto-generate'),
+      '#placeholder' => $this->secretManager->isProxySecretOverridden()
+        ? $this->t('(secret managed in settings.php - cannot edit here)')
+        : ($this->secretManager->getProxySecret() ? $this->t('(secret configured - leave empty to keep)') : $this->t('Leave empty to auto-generate')),
+      '#disabled' => $this->secretManager->isProxySecretOverridden(),
       '#states' => [
         'visible' => [
           ':input[name="deployment_mode"]' => ['value' => 'nextjs_first'],
@@ -112,6 +118,7 @@ final class SettingsForm extends ConfigFormBase {
       '#type' => 'checkbox',
       '#title' => $this->t('Generate new proxy secret on save'),
       '#default_value' => FALSE,
+      '#disabled' => $this->secretManager->isProxySecretOverridden(),
       '#states' => [
         'visible' => [
           ':input[name="deployment_mode"]' => ['value' => 'nextjs_first'],
@@ -441,7 +448,10 @@ final class SettingsForm extends ConfigFormBase {
       '#type' => 'password',
       '#title' => $this->t('Routes feed secret'),
       '#description' => $this->t('Build tooling should send this as <code>X-Routes-Secret</code> header when requesting <code>/jsonapi/routes</code>. Leave empty to keep current value.'),
-      '#placeholder' => $config->get('routes.secret') ? $this->t('(secret configured - leave empty to keep)') : $this->t('Leave empty to auto-generate'),
+      '#placeholder' => $this->secretManager->isRoutesFeedSecretOverridden()
+        ? $this->t('(secret managed in settings.php - cannot edit here)')
+        : ($this->secretManager->getRoutesFeedSecret() ? $this->t('(secret configured - leave empty to keep)') : $this->t('Leave empty to auto-generate')),
+      '#disabled' => $this->secretManager->isRoutesFeedSecretOverridden(),
       '#states' => [
         'visible' => [
           ':input[name="routes_enabled"]' => ['checked' => TRUE],
@@ -453,6 +463,7 @@ final class SettingsForm extends ConfigFormBase {
       '#type' => 'checkbox',
       '#title' => $this->t('Generate new routes feed secret on save'),
       '#default_value' => FALSE,
+      '#disabled' => $this->secretManager->isRoutesFeedSecretOverridden(),
       '#states' => [
         'visible' => [
           ':input[name="routes_enabled"]' => ['checked' => TRUE],
@@ -505,7 +516,10 @@ final class SettingsForm extends ConfigFormBase {
       '#type' => 'password',
       '#title' => $this->t('Revalidation secret'),
       '#description' => $this->t('A shared secret to authenticate webhook requests. Leave empty to keep current value, or enter a new secret.'),
-      '#placeholder' => $config->get('revalidation.secret') ? $this->t('(secret configured - leave empty to keep)') : $this->t('Enter a secret'),
+      '#placeholder' => $this->secretManager->isRevalidationSecretOverridden()
+        ? $this->t('(secret managed in settings.php - cannot edit here)')
+        : ($this->secretManager->getRevalidationSecret() ? $this->t('(secret configured - leave empty to keep)') : $this->t('Enter a secret')),
+      '#disabled' => $this->secretManager->isRevalidationSecretOverridden(),
       '#states' => [
         'visible' => [
           ':input[name="revalidation_enabled"]' => ['checked' => TRUE],
@@ -517,6 +531,7 @@ final class SettingsForm extends ConfigFormBase {
       '#type' => 'checkbox',
       '#title' => $this->t('Generate new revalidation secret on save'),
       '#default_value' => FALSE,
+      '#disabled' => $this->secretManager->isRevalidationSecretOverridden(),
       '#states' => [
         'visible' => [
           ':input[name="revalidation_enabled"]' => ['checked' => TRUE],
@@ -638,29 +653,37 @@ final class SettingsForm extends ConfigFormBase {
 
     // Handle proxy secret (password field - keep existing if empty)
     $proxy_secret = $form_state->getValue('proxy_secret') ?: '';
-    $current_secret = $config->get('proxy_secret') ?: '';
     $generate_new = $form_state->getValue('generate_secret');
 
-    if ($generate_new) {
+    if (!$this->secretManager->isProxySecretOverridden() && $generate_new) {
       // Explicitly requested new secret
       $proxy_secret = bin2hex(random_bytes(32));
+      $this->secretManager->setProxySecret($proxy_secret);
       $this->messenger()->addStatus($this->t('New proxy secret generated. Copy it to your frontend environment variables: <code>DRUPAL_PROXY_SECRET=@secret</code>', [
         '@secret' => $proxy_secret,
       ]));
     }
-    elseif (empty($proxy_secret) && !empty($current_secret)) {
-      // Keep existing secret if field was left empty
-      $proxy_secret = $current_secret;
+    elseif (!$this->secretManager->isProxySecretOverridden() && !empty($proxy_secret)) {
+      $this->secretManager->setProxySecret($proxy_secret);
     }
-    elseif ($form_state->getValue('deployment_mode') === 'nextjs_first' && empty($proxy_secret)) {
+    elseif (!$this->secretManager->isProxySecretOverridden() && $form_state->getValue('deployment_mode') === 'nextjs_first' && empty($this->secretManager->getProxySecret())) {
       // Auto-generate if enabling nextjs_first mode without a secret
       $proxy_secret = bin2hex(random_bytes(32));
+      $this->secretManager->setProxySecret($proxy_secret);
       $this->messenger()->addStatus($this->t('Proxy secret generated. Copy it to your frontend environment variables: <code>DRUPAL_PROXY_SECRET=@secret</code>', [
         '@secret' => $proxy_secret,
       ]));
     }
 
-    $config->set('proxy_secret', $proxy_secret);
+    // Preserve any existing secret (legacy config → state migration) before
+    // clearing config values.
+    if (!$this->secretManager->isProxySecretOverridden() && $this->secretManager->getProxySecret() !== '') {
+      $this->secretManager->setProxySecret($this->secretManager->getProxySecret());
+    }
+
+    // Secrets are stored outside of config exports (state or settings.php).
+    // Keep config value empty to avoid accidental leaks via config sync.
+    $config->set('proxy_secret', '');
 
     // --- Resolver configuration ---
     $resolver_cache_max_age = (int) $form_state->getValue('resolver_cache_max_age');
@@ -721,25 +744,30 @@ final class SettingsForm extends ConfigFormBase {
     // Handle routes feed secret (password field - keep existing if empty).
     $routes_secret = $form_state->getValue('routes_secret') ?: '';
     $generate_routes_secret = $form_state->getValue('generate_routes_secret');
-    $current_routes_secret = $config->get('routes.secret') ?: '';
 
-    if ($generate_routes_secret) {
+    if (!$this->secretManager->isRoutesFeedSecretOverridden() && $generate_routes_secret) {
       $routes_secret = bin2hex(random_bytes(32));
+      $this->secretManager->setRoutesFeedSecret($routes_secret);
       $this->messenger()->addStatus($this->t('New routes feed secret generated. Copy it to your build environment variables: <code>ROUTES_FEED_SECRET=@secret</code>', [
         '@secret' => $routes_secret,
       ]));
     }
-    elseif (empty($routes_secret) && !empty($current_routes_secret)) {
-      $routes_secret = $current_routes_secret;
+    elseif (!$this->secretManager->isRoutesFeedSecretOverridden() && !empty($routes_secret)) {
+      $this->secretManager->setRoutesFeedSecret($routes_secret);
     }
-    elseif ($form_state->getValue('routes_enabled') && empty($routes_secret) && empty($current_routes_secret)) {
+    elseif (!$this->secretManager->isRoutesFeedSecretOverridden() && $form_state->getValue('routes_enabled') && empty($this->secretManager->getRoutesFeedSecret())) {
       $routes_secret = bin2hex(random_bytes(32));
+      $this->secretManager->setRoutesFeedSecret($routes_secret);
       $this->messenger()->addStatus($this->t('Routes feed secret generated. Copy it to your build environment variables: <code>ROUTES_FEED_SECRET=@secret</code>', [
         '@secret' => $routes_secret,
       ]));
     }
 
-    $config->set('routes.secret', $routes_secret);
+    if (!$this->secretManager->isRoutesFeedSecretOverridden() && $this->secretManager->getRoutesFeedSecret() !== '') {
+      $this->secretManager->setRoutesFeedSecret($this->secretManager->getRoutesFeedSecret());
+    }
+
+    $config->set('routes.secret', '');
 
     // --- Revalidation configuration ---
     $config->set('revalidation.enabled', (bool) $form_state->getValue('revalidation_enabled'));
@@ -748,28 +776,32 @@ final class SettingsForm extends ConfigFormBase {
     // Handle revalidation secret
     $revalidation_secret = $form_state->getValue('revalidation_secret') ?: '';
     $generate_revalidation = $form_state->getValue('generate_revalidation_secret');
-    $current_secret = $config->get('revalidation.secret') ?: '';
 
-    if ($generate_revalidation) {
+    if (!$this->secretManager->isRevalidationSecretOverridden() && $generate_revalidation) {
       // Generate a secure random secret
       $revalidation_secret = bin2hex(random_bytes(32));
+      $this->secretManager->setRevalidationSecret($revalidation_secret);
       $this->messenger()->addStatus($this->t('New revalidation secret generated. Copy it to your frontend environment variables: <code>REVALIDATION_SECRET=@secret</code>', [
         '@secret' => $revalidation_secret,
       ]));
     }
-    elseif (empty($revalidation_secret) && !empty($current_secret)) {
-      // Keep existing secret if field was left empty
-      $revalidation_secret = $current_secret;
+    elseif (!$this->secretManager->isRevalidationSecretOverridden() && !empty($revalidation_secret)) {
+      $this->secretManager->setRevalidationSecret($revalidation_secret);
     }
-    elseif ($form_state->getValue('revalidation_enabled') && empty($revalidation_secret) && empty($current_secret)) {
+    elseif (!$this->secretManager->isRevalidationSecretOverridden() && $form_state->getValue('revalidation_enabled') && empty($this->secretManager->getRevalidationSecret())) {
       // Auto-generate if enabling but no secret exists
       $revalidation_secret = bin2hex(random_bytes(32));
+      $this->secretManager->setRevalidationSecret($revalidation_secret);
       $this->messenger()->addStatus($this->t('Revalidation secret generated. Copy it to your frontend environment variables: <code>REVALIDATION_SECRET=@secret</code>', [
         '@secret' => $revalidation_secret,
       ]));
     }
 
-    $config->set('revalidation.secret', $revalidation_secret);
+    if (!$this->secretManager->isRevalidationSecretOverridden() && $this->secretManager->getRevalidationSecret() !== '') {
+      $this->secretManager->setRevalidationSecret($this->secretManager->getRevalidationSecret());
+    }
+
+    $config->set('revalidation.secret', '');
 
     $config->save();
 

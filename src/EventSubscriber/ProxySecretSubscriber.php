@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Drupal\jsonapi_frontend\EventSubscriber;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\jsonapi_frontend\Service\SecretManager;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
@@ -38,6 +39,7 @@ final class ProxySecretSubscriber implements EventSubscriberInterface {
 
   public function __construct(
     private readonly ConfigFactoryInterface $configFactory,
+    private readonly SecretManager $secretManager,
   ) {}
 
   public static function getSubscribedEvents(): array {
@@ -59,7 +61,7 @@ final class ProxySecretSubscriber implements EventSubscriberInterface {
       return;
     }
 
-    $proxy_secret = $config->get('proxy_secret');
+    $proxy_secret = $this->secretManager->getProxySecret();
 
     // If no secret configured, skip validation (not recommended for production).
     if (empty($proxy_secret)) {

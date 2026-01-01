@@ -218,6 +218,16 @@ In production, always restrict remote images to your Drupal host:
 - Set `trusted_host_patterns` in Drupal `settings.php` (prevents Host-header injection issues).
 - Set “Drupal URL” in the module settings so generated `drupal_url` values are deterministic.
 
+### 4) Keep secrets out of config exports
+
+This module avoids storing secrets in config exports (config sync). Secrets are stored in Drupal state by default, and you can optionally override them in `settings.php` for deterministic deploys:
+
+```php
+$settings['jsonapi_frontend']['proxy_secret'] = getenv('DRUPAL_PROXY_SECRET');
+$settings['jsonapi_frontend']['routes_secret'] = getenv('ROUTES_FEED_SECRET');
+$settings['jsonapi_frontend']['revalidation_secret'] = getenv('REVALIDATION_SECRET');
+```
+
 In this mode the Drupal module enforces the `X-Proxy-Secret` header for most requests, and allows these paths through without the secret:
 - `/jsonapi/*`, `/admin/*`, `/user/*`, `/batch*`, `/system*`
 

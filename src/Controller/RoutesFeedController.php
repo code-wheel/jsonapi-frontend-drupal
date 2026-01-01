@@ -8,6 +8,7 @@ use Drupal\Core\Cache\CacheableJsonResponse;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\jsonapi_frontend\Service\RoutesFeedBuilder;
+use Drupal\jsonapi_frontend\Service\SecretManager;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -23,11 +24,13 @@ final class RoutesFeedController extends ControllerBase {
 
   public function __construct(
     private readonly RoutesFeedBuilder $routesFeedBuilder,
+    private readonly SecretManager $secretManager,
   ) {}
 
   public static function create(ContainerInterface $container): self {
     return new self(
       $container->get('jsonapi_frontend.routes_feed_builder'),
+      $container->get('jsonapi_frontend.secret_manager'),
     );
   }
 
@@ -42,7 +45,7 @@ final class RoutesFeedController extends ControllerBase {
       );
     }
 
-    $configured_secret = (string) ($config->get('routes.secret') ?? '');
+    $configured_secret = $this->secretManager->getRoutesFeedSecret();
     if ($configured_secret === '') {
       return $this->errorResponse(
         status: 500,

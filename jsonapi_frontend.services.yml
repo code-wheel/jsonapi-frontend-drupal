@@ -22,10 +22,18 @@ services:
       - '@account_switcher'
       - '@logger.channel.jsonapi_frontend'
 
+  jsonapi_frontend.secret_manager:
+    class: Drupal\jsonapi_frontend\Service\SecretManager
+    arguments:
+      - '@state'
+      - '@config.factory'
+      - '@config.storage'
+
   jsonapi_frontend.proxy_secret_subscriber:
     class: Drupal\jsonapi_frontend\EventSubscriber\ProxySecretSubscriber
     arguments:
       - '@config.factory'
+      - '@jsonapi_frontend.secret_manager'
     tags:
       - { name: event_subscriber }
 
@@ -33,6 +41,7 @@ services:
     class: Drupal\jsonapi_frontend\EventSubscriber\RevalidationSubscriber
     arguments:
       - '@config.factory'
+      - '@jsonapi_frontend.secret_manager'
       - '@http_client'
       - '@logger.channel.jsonapi_frontend'
     tags:

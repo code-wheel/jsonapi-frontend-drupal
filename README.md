@@ -95,6 +95,7 @@ For deployment and migration examples, see `MIGRATION.md`.
 - The resolver respects entity access; unpublished/restricted content resolves as “not found”.
 - Resolver caching is only applied for anonymous requests; authenticated requests return `Cache-Control: no-store`.
 - If you enable the routes feed (`/jsonapi/routes`), keep the secret in build-only env vars and don’t expose it to browsers.
+- For config-managed sites, secrets are stored outside config exports (state) and can be overridden in `settings.php`.
 - The endpoint lives under `/jsonapi/` so it can share the same perimeter rules you apply to JSON:API.
 - If you run “frontend-first”, you can protect the Drupal origin with a shared secret header.
 - For authenticated JSON:API, keep credentials server-side (Basic/OAuth/JWT). Cookie-based writes require Drupal CSRF tokens (`/session/token`) and strict CORS.
