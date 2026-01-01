@@ -66,10 +66,10 @@ if (resolved.resolved && resolved.kind === "entity") {
 }
 ```
 
-### Next.js starter (optional)
+### Starters (optional)
 
-For a complete reference implementation (routing + rendering + media helpers), use the Next.js starter:
-https://github.com/code-wheel/jsonapi-frontend-next
+- Next.js (routing + rendering + media helpers): https://github.com/code-wheel/jsonapi-frontend-next
+- Astro (SSR + optional proxy middleware): https://github.com/code-wheel/jsonapi-frontend-astro
 
 ## Configuration
 

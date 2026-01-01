@@ -88,10 +88,11 @@ You can use any framework. Two easy options:
 
 - TypeScript client (optional): `@codewheel/jsonapi-frontend-client`
 - Next.js starter (optional): https://github.com/code-wheel/jsonapi-frontend-next
+- Astro starter (optional): https://github.com/code-wheel/jsonapi-frontend-astro
 
 ### Split routing frontend env
 
-For the Next.js starter:
+For the starter templates (Next.js / Astro):
 
 ```env
 DEPLOYMENT_MODE=split_routing
@@ -100,7 +101,7 @@ DRUPAL_BASE_URL=https://www.example.com
 
 ### Frontend-first env
 
-For the Next.js starter:
+For the starter templates (Next.js / Astro):
 
 ```env
 DEPLOYMENT_MODE=nextjs_first
@@ -111,6 +112,8 @@ DRUPAL_PROXY_SECRET=your-secret-from-drupal-admin
 
 In this mode the Drupal module enforces the `X-Proxy-Secret` header for most requests, and allows these paths through without the secret:
 - `/jsonapi/*`, `/admin/*`, `/user/*`, `/batch*`, `/system*`
+
+If you proxy Drupal HTML through your frontend, also proxy Drupal assets (commonly `/sites/*`, `/core/*`, `/modules/*`, `/themes/*`) so pages can load CSS/JS/files.
 
 ## 3. Routing
 
