@@ -16,6 +16,12 @@
     "issues": "https://www.drupal.org/project/issues/jsonapi_frontend",
     "source": "https://git.drupalcode.org/project/jsonapi_frontend"
   },
+  "repositories": [
+    {
+      "type": "composer",
+      "url": "https://packages.drupal.org/8"
+    }
+  ],
   "require": {
     "drupal/core": "^10 || ^11"
   },
