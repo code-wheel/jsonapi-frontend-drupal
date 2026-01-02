@@ -180,7 +180,7 @@ Two approaches:
 - Baseline: use <a href="https://www.drupal.org/project/jsonapi_menu_items">jsonapi_menu_items</a> to expose menu links with Drupal access filtering.
 - Turnkey: install <a href="https://www.drupal.org/project/jsonapi_frontend_menu">jsonapi_frontend_menu</a> to get a ready-to-render tree + optional active trail + per-link `resolve` hints:
 
-  <pre><code>GET /jsonapi/menu/main?path=/about-us&amp;_format=json</code></pre>
+  <pre><code>GET /jsonapi/menu/main?path=/about-us&_format=json</code></pre>
 
 If you want maximum cache reuse, call the menu endpoint <em>without</em> `path` and compute active trail client-side.
 
