@@ -207,7 +207,14 @@ Notes:
 
 - **Split routing:** route Layout Builder paths to Drupal in your router/CDN (or rely on the frontend redirect when `headless=false`).
 - **Frontend-first (`nextjs_first`):** your frontend proxy should forward non-headless requests to the Drupal origin.
-- Truly headless Layout Builder requires a structured “layout tree” API + a frontend renderer/mapping layer. That’s intentionally out of scope for `jsonapi_frontend` core and is a good candidate for an optional add-on (future).
+- For truly headless Layout Builder, install the optional add-on `jsonapi_frontend_layout` and use:
+
+  <pre><code>GET /jsonapi/layout/resolve?path=/about-us&_format=json</code></pre>
+
+  The response matches `/jsonapi/resolve` and includes a `layout` tree when applicable.
+
+  - Next.js starter: uses `resolvePathWithLayout()` and renders a minimal Layout Builder tree (field blocks + inline blocks).
+  - Astro: use `@codewheel/jsonapi-frontend-client`’s `resolvePathWithLayout()` and implement your renderer mapping (framework-specific).
 
 ### Split routing frontend env
 

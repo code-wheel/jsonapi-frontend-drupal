@@ -100,7 +100,7 @@ For deployment and migration examples, see `MIGRATION.md`.
 
 - **Entities:** any canonical content entity route exposed by JSON:API (nodes, terms, media, users, and custom entities)
 - **Views:** page displays with paths (requires `jsonapi_views`)
-- **Layout Builder:** supported in hybrid mode by keeping Layout Builder pages non-headless so the resolver returns `drupal_url` (frontend can redirect/proxy to Drupal). See `MIGRATION.md`.
+- **Layout Builder:** hybrid mode (keep bundles non-headless) or true headless via the optional add-on `jsonapi_frontend_layout` (`/jsonapi/layout/resolve`). See `MIGRATION.md`.
 
 ## Security notes
 
@@ -121,3 +121,4 @@ For deployment and migration examples, see `MIGRATION.md`.
 - Starter: https://github.com/code-wheel/jsonapi-frontend-next
 - Menus (optional): https://www.drupal.org/project/jsonapi_frontend_menu
 - Webforms (optional): https://www.drupal.org/project/jsonapi_frontend_webform
+- Layout Builder (optional): https://www.drupal.org/project/jsonapi_frontend_layout
