@@ -19,7 +19,7 @@ use Symfony\Component\HttpFoundation\RequestStack;
 /**
  * Resolves frontend paths to JSON:API resource URLs.
  */
-final class PathResolver {
+final class PathResolver implements PathResolverInterface {
 
   public function __construct(
     private readonly EntityTypeManagerInterface $entityTypeManager,
@@ -37,7 +37,7 @@ final class PathResolver {
    *
    * Contract:
    * - resolved: bool
-   * - kind: "entity"|"view"|"redirect"|null
+   * - kind: "entity"|"view"|"redirect"|"route"|null
    * - canonical: string|null
    * - entity: {type,id,langcode}|null
    * - redirect: {to,status}|null
@@ -45,6 +45,10 @@ final class PathResolver {
    * - data_url: string|null (for views)
    * - headless: bool (whether this content type is headless-enabled)
    * - drupal_url: string|null (URL to Drupal frontend for non-headless content)
+   *
+   * Notes:
+   * - Optional integration modules may return additional kinds (e.g. "route")
+   *   to indicate Drupal-rendered routes that should be proxied/redirected.
    */
   public function resolve(string $path, ?string $langcode = NULL): array {
     [$path, $query] = $this->splitPathAndQuery($path);

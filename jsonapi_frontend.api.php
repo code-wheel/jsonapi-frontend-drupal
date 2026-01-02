@@ -99,7 +99,7 @@
  *
  * if ($result['resolved']) {
  *   // Path was resolved.
- *   $kind = $result['kind']; // 'entity', 'view', or 'redirect'
+ *   $kind = $result['kind']; // 'entity', 'view', 'redirect', or 'route'
  *   $headless = $result['headless']; // TRUE if headless-enabled
  *
  *   if ($result['kind'] === 'entity') {
@@ -113,6 +113,10 @@
  *   elseif ($result['kind'] === 'redirect') {
  *     $to = $result['redirect']['to'];
  *     $status = $result['redirect']['status']; // 301/302/etc
+ *   }
+ *   elseif ($result['kind'] === 'route') {
+ *     // Non-entity Drupal route. Frontends typically proxy/redirect to drupal_url.
+ *     $drupal_url = $result['drupal_url'];
  *   }
  * }
  * @endcode

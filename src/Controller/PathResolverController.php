@@ -7,7 +7,7 @@ namespace Drupal\jsonapi_frontend\Controller;
 use Drupal\Core\Cache\CacheableJsonResponse;
 use Drupal\Core\Cache\CacheableMetadata;
 use Drupal\Core\Controller\ControllerBase;
-use Drupal\jsonapi_frontend\Service\PathResolver;
+use Drupal\jsonapi_frontend\Service\PathResolverInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -22,7 +22,7 @@ final class PathResolverController extends ControllerBase {
   private const CONTENT_TYPE = 'application/vnd.api+json; charset=utf-8';
 
   public function __construct(
-    private readonly PathResolver $resolver,
+    private readonly PathResolverInterface $resolver,
   ) {}
 
   public static function create(ContainerInterface $container): self {
