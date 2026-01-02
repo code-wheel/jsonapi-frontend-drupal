@@ -69,7 +69,7 @@ final class PathResolverController extends ControllerBase {
       $cacheable->addCacheContexts(['languages:language_content']);
     }
 
-    $cacheable->applyTo($response);
+    $response->addCacheableDependency($cacheable);
 
     $this->applySecurityHeaders($response, $max_age);
 
@@ -94,7 +94,7 @@ final class PathResolverController extends ControllerBase {
 
     $cacheable = new CacheableMetadata();
     $cacheable->setCacheMaxAge(0);
-    $cacheable->applyTo($response);
+    $response->addCacheableDependency($cacheable);
     $this->applySecurityHeaders($response, 0);
 
     return $response;

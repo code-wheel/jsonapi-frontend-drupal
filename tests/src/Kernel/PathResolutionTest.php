@@ -9,6 +9,7 @@ use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\node\Entity\Node;
 use Drupal\node\Entity\NodeType;
 use Drupal\user\Entity\User;
+use Symfony\Component\HttpFoundation\Request;
 
 /**
  * Kernel tests for path resolution functionality.
@@ -193,6 +194,33 @@ class PathResolutionTest extends KernelTestBase {
     $this->assertTrue($result['resolved']);
     $this->assertEquals('entity', $result['kind']);
     $this->assertEquals($node->uuid(), $result['entity']['id']);
+  }
+
+  /**
+   * Tests the /jsonapi/resolve controller response.
+   */
+  public function testResolveControllerResponse(): void {
+    $node = Node::create([
+      'type' => 'page',
+      'title' => 'About Us',
+      'status' => 1,
+      'path' => ['alias' => '/about-us'],
+    ]);
+    $node->save();
+
+    $controller = \Drupal\jsonapi_frontend\Controller\PathResolverController::create($this->container);
+    $request = Request::create('/jsonapi/resolve', 'GET', [
+      'path' => '/about-us',
+      '_format' => 'json',
+    ]);
+
+    $response = $controller->resolve($request);
+    $payload = json_decode((string) $response->getContent(), TRUE);
+
+    $this->assertIsArray($payload);
+    $this->assertTrue($payload['resolved']);
+    $this->assertEquals('entity', $payload['kind']);
+    $this->assertEquals($node->uuid(), $payload['entity']['id']);
   }
 
 }

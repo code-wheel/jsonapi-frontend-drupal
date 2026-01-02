@@ -119,7 +119,7 @@ final class RoutesFeedController extends ControllerBase {
     $cacheable = new CacheableMetadata();
     $cacheable->setCacheMaxAge(0);
     $cacheable->addCacheTags(['config:jsonapi_frontend.settings']);
-    $cacheable->applyTo($response);
+    $response->addCacheableDependency($cacheable);
 
     $this->applySecurityHeaders($response);
 
@@ -144,7 +144,7 @@ final class RoutesFeedController extends ControllerBase {
 
     $cacheable = new CacheableMetadata();
     $cacheable->setCacheMaxAge(0);
-    $cacheable->applyTo($response);
+    $response->addCacheableDependency($cacheable);
     $this->applySecurityHeaders($response);
 
     return $response;
