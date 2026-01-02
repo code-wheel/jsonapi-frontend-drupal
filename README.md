@@ -100,6 +100,7 @@ For deployment and migration examples, see `MIGRATION.md`.
 
 - **Entities:** any canonical content entity route exposed by JSON:API (nodes, terms, media, users, and custom entities)
 - **Views:** page displays with paths (requires `jsonapi_views`)
+- **Layout Builder:** supported in hybrid mode by keeping Layout Builder pages non-headless so the resolver returns `drupal_url` (frontend can redirect/proxy to Drupal). See `MIGRATION.md`.
 
 ## Security notes
 

@@ -196,6 +196,19 @@ Most teams do this in one of two ways:
 
 The headless approach typically relies on <a href="https://www.drupal.org/project/webform_rest">webform_rest</a> (REST resources) and requires careful auth/CORS/CSRF handling for submissions.
 
+### Layout Builder (optional)
+
+Layout Builder works best when Drupal renders the page. In a hybrid/headless setup, the simplest and most portable approach is:
+
+- Keep Layout Builder bundles **non-headless** in `/admin/config/services/jsonapi-frontend`.
+- Let the resolver return `headless=false` + `drupal_url`, and have the frontend redirect/proxy to Drupal for those pages.
+
+Notes:
+
+- **Split routing:** route Layout Builder paths to Drupal in your router/CDN (or rely on the frontend redirect when `headless=false`).
+- **Frontend-first (`nextjs_first`):** your frontend proxy should forward non-headless requests to the Drupal origin.
+- Truly headless Layout Builder requires a structured “layout tree” API + a frontend renderer/mapping layer. That’s intentionally out of scope for `jsonapi_frontend` core and is a good candidate for an optional add-on (future).
+
 ### Split routing frontend env
 
 For the starter templates (Next.js / Astro):
