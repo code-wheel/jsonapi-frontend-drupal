@@ -223,4 +223,61 @@ class PathResolutionTest extends KernelTestBase {
     $this->assertEquals($node->uuid(), $payload['entity']['id']);
   }
 
+  /**
+   * Tests the /jsonapi/resolve controller returns a JSON:API error for missing path.
+   */
+  public function testResolveControllerMissingPathReturns400(): void {
+    $controller = \Drupal\jsonapi_frontend\Controller\PathResolverController::create($this->container);
+    $request = Request::create('/jsonapi/resolve', 'GET', [
+      '_format' => 'json',
+    ]);
+
+    $response = $controller->resolve($request);
+
+    $this->assertSame(400, $response->getStatusCode());
+    $this->assertStringContainsString('no-store', (string) $response->headers->get('Cache-Control'));
+
+    $payload = json_decode((string) $response->getContent(), TRUE);
+    $this->assertIsArray($payload);
+    $this->assertArrayHasKey('errors', $payload);
+  }
+
+  /**
+   * Tests resolver response caching differs for anonymous vs authenticated.
+   */
+  public function testResolveControllerCacheHeadersAnonymousVsAuthenticated(): void {
+    $node = Node::create([
+      'type' => 'page',
+      'title' => 'About Us',
+      'status' => 1,
+      'path' => ['alias' => '/about-us'],
+    ]);
+    $node->save();
+
+    $this->config('jsonapi_frontend.settings')
+      ->set('resolver.cache_max_age', 60)
+      ->save();
+
+    $controller = \Drupal\jsonapi_frontend\Controller\PathResolverController::create($this->container);
+    $request = Request::create('/jsonapi/resolve', 'GET', [
+      'path' => '/about-us',
+      '_format' => 'json',
+    ]);
+
+    $this->container->get('current_user')->setAccount(new AnonymousUserSession());
+    $anonymous_response = $controller->resolve($request);
+    $cache_control = (string) $anonymous_response->headers->get('Cache-Control');
+    $this->assertStringContainsString('max-age=60', $cache_control);
+    $this->assertStringContainsString('public', $cache_control);
+
+    $admin = User::create([
+      'name' => 'admin2',
+      'status' => 1,
+    ]);
+    $admin->save();
+    $this->container->get('current_user')->setAccount($admin);
+    $auth_response = $controller->resolve($request);
+    $this->assertStringContainsString('no-store', (string) $auth_response->headers->get('Cache-Control'));
+  }
+
 }

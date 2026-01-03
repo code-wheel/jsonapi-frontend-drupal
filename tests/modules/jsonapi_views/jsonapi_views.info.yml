@@ -1,0 +1,5 @@
+name: JSON:API Views (stub)
+type: module
+description: 'Test stub module used by jsonapi_frontend to simulate jsonapi_views being installed.'
+package: Testing
+core_version_requirement: ^10 || ^11

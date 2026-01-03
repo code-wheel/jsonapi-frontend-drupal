@@ -63,8 +63,8 @@ final class RoutesFeedController extends ControllerBase {
       );
     }
 
-    $page = $request->query->get('page');
-    $page = is_array($page) ? $page : [];
+    $query = $request->query->all();
+    $page = is_array($query['page'] ?? NULL) ? $query['page'] : [];
 
     $limit = (int) ($page['limit'] ?? 50);
     $limit = max(1, min(200, $limit));
@@ -78,8 +78,6 @@ final class RoutesFeedController extends ControllerBase {
     $langcode = is_string($langcode) && $langcode !== '' ? $langcode : NULL;
 
     $result = $this->routesFeedBuilder->getPage($limit, $cursor, $langcode);
-
-    $query = $request->query->all();
 
     $query['page'] = is_array($query['page'] ?? NULL) ? $query['page'] : [];
     $query['page']['limit'] = $limit;

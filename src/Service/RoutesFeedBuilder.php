@@ -54,6 +54,8 @@ final class RoutesFeedBuilder {
     ];
 
     $items = [];
+    $bundle_index = 0;
+    $last_id = NULL;
 
     $anonymous = new AnonymousUserSession();
     $this->accountSwitcher->switchTo($anonymous);
@@ -146,9 +148,18 @@ final class RoutesFeedBuilder {
       $this->accountSwitcher->switchBack();
     }
 
+    $next_cursor = NULL;
+    if (count($items) >= $limit && $bundle_index < count($bundle_keys)) {
+      $next_cursor = $this->encodeCursor([
+        'segment' => 'entities',
+        'bundle_index' => $bundle_index,
+        'last_id' => $last_id,
+      ]);
+    }
+
     return [
       'items' => $items,
-      'next_cursor' => NULL,
+      'next_cursor' => $next_cursor,
       'langcode' => $effective_langcode,
     ];
   }

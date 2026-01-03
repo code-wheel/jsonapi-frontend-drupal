@@ -5,13 +5,18 @@ declare(strict_types=1);
 namespace Drupal\Tests\jsonapi_frontend\Unit;
 
 use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\Entity\ContentEntityInterface;
+use Drupal\Core\Entity\EntityStorageInterface;
+use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Extension\ModuleHandlerInterface;
+use Drupal\Core\Language\LanguageInterface;
 use Drupal\Core\Language\LanguageManagerInterface;
 use Drupal\Core\Path\PathValidatorInterface;
 use Drupal\jsonapi_frontend\Service\PathResolver;
 use Drupal\path_alias\AliasManagerInterface;
 use Drupal\Tests\UnitTestCase;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 
 /**
@@ -21,6 +26,71 @@ use Symfony\Component\HttpFoundation\RequestStack;
  * @coversDefaultClass \Drupal\jsonapi_frontend\Service\PathResolver
  */
 class PathResolverTest extends UnitTestCase {
+
+  private function createConfigFactory(array $values): ConfigFactoryInterface {
+    $config = new class($values) {
+      public function __construct(private readonly array $values) {}
+
+      public function get(string $key): mixed {
+        return $this->values[$key] ?? NULL;
+      }
+    };
+
+    $factory = $this->createMock(ConfigFactoryInterface::class);
+    $factory->method('get')
+      ->with('jsonapi_frontend.settings')
+      ->willReturn($config);
+
+    return $factory;
+  }
+
+  private function createUrl(string $route_name, array $params): object {
+    return new class($route_name, $params) {
+      public function __construct(
+        private readonly string $routeName,
+        private readonly array $params,
+      ) {}
+
+      public function getRouteName(): string {
+        return $this->routeName;
+      }
+
+      public function getRouteParameters(): array {
+        return $this->params;
+      }
+    };
+  }
+
+  /**
+   * @covers ::resolve
+   */
+  public function testResolveReturnsNotFoundWhenPathIsEmptyOrTooLong(): void {
+    $entityTypeManager = $this->createMock(EntityTypeManagerInterface::class);
+    $aliasManager = $this->createMock(AliasManagerInterface::class);
+    $pathValidator = $this->createMock(PathValidatorInterface::class);
+    $languageManager = $this->createMock(LanguageManagerInterface::class);
+    $moduleHandler = $this->createMock(ModuleHandlerInterface::class);
+
+    $configFactory = $this->createMock(ConfigFactoryInterface::class);
+    $configFactory->expects($this->never())->method('get');
+
+    $requestStack = $this->createMock(RequestStack::class);
+
+    $resolver = new PathResolver(
+      $entityTypeManager,
+      $aliasManager,
+      $pathValidator,
+      $languageManager,
+      $moduleHandler,
+      $configFactory,
+      $requestStack,
+      NULL,
+    );
+
+    $this->assertFalse($resolver->resolve('')['resolved']);
+    $this->assertFalse($resolver->resolve('   ')['resolved']);
+    $this->assertFalse($resolver->resolve(str_repeat('a', 2050))['resolved']);
+  }
 
   /**
    * @covers ::resolve
@@ -101,109 +171,251 @@ class PathResolverTest extends UnitTestCase {
   }
 
   /**
-   * Tests JSON:API resource type generation.
-   *
-   * @covers ::jsonapiResourceType
-   * @dataProvider jsonapiResourceTypeProvider
+   * @covers ::resolve
    */
-  public function testJsonapiResourceType(string $entityType, string $bundle, string $expected): void {
-    // The jsonapiResourceType method is private, so we test via reflection
-    // or through the public resolve() method in kernel tests.
-    // This test documents the expected format.
-    $result = $entityType . '--' . $bundle;
-    $this->assertEquals($expected, $result);
+  public function testResolveEntityUsesSiteDefaultLanguageByDefault(): void {
+    $entityTypeManager = $this->createMock(EntityTypeManagerInterface::class);
+
+    $definition = $this->createMock(EntityTypeInterface::class);
+    $definition->method('entityClassImplements')->with(ContentEntityInterface::class)->willReturn(TRUE);
+    $entityTypeManager->method('getDefinition')->with('node', FALSE)->willReturn($definition);
+
+    $storage = $this->createMock(EntityStorageInterface::class);
+
+    $entity = $this->createMock(ContentEntityInterface::class);
+    $entity->method('getEntityTypeId')->willReturn('node');
+    $entity->method('bundle')->willReturn('page');
+    $entity->method('uuid')->willReturn('550e8400-e29b-41d4-a716-446655440000');
+    $entity->method('access')->with('view')->willReturn(TRUE);
+
+    $storage->method('load')->with('1')->willReturn($entity);
+    $entityTypeManager->method('getStorage')->with('node')->willReturn($storage);
+
+    $aliasManager = $this->createMock(AliasManagerInterface::class);
+    $aliasManager->expects($this->once())
+      ->method('getPathByAlias')
+      ->with('/about-us', 'en')
+      ->willReturn('/node/1');
+    $aliasManager->expects($this->once())
+      ->method('getAliasByPath')
+      ->with('/node/1', 'en')
+      ->willReturn('/about-us');
+
+    $pathValidator = $this->createMock(PathValidatorInterface::class);
+    $pathValidator->expects($this->once())
+      ->method('getUrlIfValid')
+      ->with('/node/1')
+      ->willReturn($this->createUrl('entity.node.canonical', ['node' => '1']));
+
+    $languageManager = $this->createMock(LanguageManagerInterface::class);
+    $default = $this->createMock(LanguageInterface::class);
+    $default->method('getId')->willReturn('en');
+    $languageManager->method('getDefaultLanguage')->willReturn($default);
+
+    $moduleHandler = $this->createMock(ModuleHandlerInterface::class);
+    $moduleHandler->method('moduleExists')->willReturn(FALSE);
+
+    $configFactory = $this->createConfigFactory([
+      'resolver.langcode_fallback' => 'site_default',
+      'enable_all' => TRUE,
+      'drupal_base_url' => 'https://cms.example.com',
+    ]);
+
+    $requestStack = $this->createMock(RequestStack::class);
+
+    $resolver = new PathResolver(
+      $entityTypeManager,
+      $aliasManager,
+      $pathValidator,
+      $languageManager,
+      $moduleHandler,
+      $configFactory,
+      $requestStack,
+      NULL,
+    );
+
+    $result = $resolver->resolve('/about-us');
+
+    $this->assertTrue($result['resolved']);
+    $this->assertSame('entity', $result['kind']);
+    $this->assertSame('/about-us', $result['canonical']);
+    $this->assertSame('node--page', $result['entity']['type']);
+    $this->assertSame('550e8400-e29b-41d4-a716-446655440000', $result['entity']['id']);
+    $this->assertSame('en', $result['entity']['langcode']);
+    $this->assertSame('/jsonapi/node/page/550e8400-e29b-41d4-a716-446655440000', $result['jsonapi_url']);
+    $this->assertTrue($result['headless']);
+    $this->assertNull($result['drupal_url']);
   }
 
   /**
-   * Data provider for testJsonapiResourceType.
+   * @covers ::resolve
    */
-  public static function jsonapiResourceTypeProvider(): array {
-    return [
-      'node page' => ['node', 'page', 'node--page'],
-      'node article' => ['node', 'article', 'node--article'],
-      'taxonomy term tags' => ['taxonomy_term', 'tags', 'taxonomy_term--tags'],
-      'media image' => ['media', 'image', 'media--image'],
-      'user user' => ['user', 'user', 'user--user'],
-    ];
+  public function testResolveEntityReturnsDrupalUrlWhenNotHeadless(): void {
+    $entityTypeManager = $this->createMock(EntityTypeManagerInterface::class);
+
+    $definition = $this->createMock(EntityTypeInterface::class);
+    $definition->method('entityClassImplements')->with(ContentEntityInterface::class)->willReturn(TRUE);
+    $entityTypeManager->method('getDefinition')->with('node', FALSE)->willReturn($definition);
+
+    $storage = $this->createMock(EntityStorageInterface::class);
+
+    $entity = $this->createMock(ContentEntityInterface::class);
+    $entity->method('getEntityTypeId')->willReturn('node');
+    $entity->method('bundle')->willReturn('page');
+    $entity->method('uuid')->willReturn('uuid');
+    $entity->method('access')->with('view')->willReturn(TRUE);
+
+    $storage->method('load')->with('1')->willReturn($entity);
+    $entityTypeManager->method('getStorage')->with('node')->willReturn($storage);
+
+    $aliasManager = $this->createMock(AliasManagerInterface::class);
+    $aliasManager->method('getPathByAlias')->willReturn('/node/1');
+    $aliasManager->method('getAliasByPath')->willReturn('/about-us');
+
+    $pathValidator = $this->createMock(PathValidatorInterface::class);
+    $pathValidator->method('getUrlIfValid')->willReturn($this->createUrl('entity.node.canonical', ['node' => '1']));
+
+    $languageManager = $this->createMock(LanguageManagerInterface::class);
+    $default = $this->createMock(LanguageInterface::class);
+    $default->method('getId')->willReturn('en');
+    $languageManager->method('getDefaultLanguage')->willReturn($default);
+
+    $moduleHandler = $this->createMock(ModuleHandlerInterface::class);
+    $moduleHandler->method('moduleExists')->willReturn(FALSE);
+
+    $configFactory = $this->createConfigFactory([
+      'resolver.langcode_fallback' => 'site_default',
+      'enable_all' => FALSE,
+      'headless_bundles' => [],
+      'drupal_base_url' => 'https://cms.example.com/',
+    ]);
+
+    $requestStack = $this->createMock(RequestStack::class);
+    $requestStack->method('getCurrentRequest')->willReturn(Request::create('https://current.example'));
+
+    $resolver = new PathResolver(
+      $entityTypeManager,
+      $aliasManager,
+      $pathValidator,
+      $languageManager,
+      $moduleHandler,
+      $configFactory,
+      $requestStack,
+      NULL,
+    );
+
+    $result = $resolver->resolve('about-us/');
+
+    $this->assertTrue($result['resolved']);
+    $this->assertFalse($result['headless']);
+    $this->assertSame('https://cms.example.com/about-us', $result['drupal_url']);
   }
 
   /**
-   * Tests JSON:API path generation.
-   *
-   * @covers ::jsonapiPath
-   * @dataProvider jsonapiPathProvider
+   * @covers ::resolve
    */
-  public function testJsonapiPath(string $entityType, string $bundle, string $uuid, string $expected): void {
-    // Documents the expected JSON:API URL format.
-    $result = '/jsonapi/' . $entityType . '/' . $bundle . '/' . $uuid;
-    $this->assertEquals($expected, $result);
+  public function testResolveReturnsNotFoundWhenEntityIsNotViewable(): void {
+    $entityTypeManager = $this->createMock(EntityTypeManagerInterface::class);
+
+    $definition = $this->createMock(EntityTypeInterface::class);
+    $definition->method('entityClassImplements')->with(ContentEntityInterface::class)->willReturn(TRUE);
+    $entityTypeManager->method('getDefinition')->with('node', FALSE)->willReturn($definition);
+
+    $storage = $this->createMock(EntityStorageInterface::class);
+    $entity = $this->createMock(ContentEntityInterface::class);
+    $entity->method('getEntityTypeId')->willReturn('node');
+    $entity->method('bundle')->willReturn('page');
+    $entity->method('uuid')->willReturn('uuid');
+    $entity->method('access')->with('view')->willReturn(FALSE);
+
+    $storage->method('load')->with('1')->willReturn($entity);
+    $entityTypeManager->method('getStorage')->with('node')->willReturn($storage);
+
+    $aliasManager = $this->createMock(AliasManagerInterface::class);
+    $aliasManager->method('getPathByAlias')->willReturn('/node/1');
+    $aliasManager->method('getAliasByPath')->willReturn('/about-us');
+
+    $pathValidator = $this->createMock(PathValidatorInterface::class);
+    $pathValidator->method('getUrlIfValid')->willReturn($this->createUrl('entity.node.canonical', ['node' => '1']));
+
+    $languageManager = $this->createMock(LanguageManagerInterface::class);
+    $default = $this->createMock(LanguageInterface::class);
+    $default->method('getId')->willReturn('en');
+    $languageManager->method('getDefaultLanguage')->willReturn($default);
+
+    $moduleHandler = $this->createMock(ModuleHandlerInterface::class);
+    $moduleHandler->method('moduleExists')->willReturn(FALSE);
+
+    $configFactory = $this->createConfigFactory([
+      'resolver.langcode_fallback' => 'site_default',
+      'enable_all' => TRUE,
+    ]);
+
+    $requestStack = $this->createMock(RequestStack::class);
+
+    $resolver = new PathResolver(
+      $entityTypeManager,
+      $aliasManager,
+      $pathValidator,
+      $languageManager,
+      $moduleHandler,
+      $configFactory,
+      $requestStack,
+      NULL,
+    );
+
+    $this->assertFalse($resolver->resolve('/about-us')['resolved']);
   }
 
   /**
-   * Data provider for testJsonapiPath.
+   * @covers ::resolve
    */
-  public static function jsonapiPathProvider(): array {
-    return [
-      'node page' => [
-        'node',
-        'page',
-        '550e8400-e29b-41d4-a716-446655440000',
-        '/jsonapi/node/page/550e8400-e29b-41d4-a716-446655440000',
-      ],
-      'taxonomy term' => [
-        'taxonomy_term',
-        'tags',
-        '123e4567-e89b-12d3-a456-426614174000',
-        '/jsonapi/taxonomy_term/tags/123e4567-e89b-12d3-a456-426614174000',
-      ],
-    ];
-  }
+  public function testResolvePrefersUpcastedEntityFromRouteParams(): void {
+    $entityTypeManager = $this->createMock(EntityTypeManagerInterface::class);
+    $entityTypeManager->expects($this->never())->method('getDefinition');
 
-  /**
-   * Tests path normalization.
-   *
-   * @dataProvider pathNormalizationProvider
-   */
-  public function testPathNormalization(string $input, string $expected): void {
-    // Test path normalization logic.
-    $path = $input;
+    $entity = $this->createMock(ContentEntityInterface::class);
+    $entity->method('getEntityTypeId')->willReturn('node');
+    $entity->method('bundle')->willReturn('page');
+    $entity->method('uuid')->willReturn('uuid');
+    $entity->method('access')->with('view')->willReturn(TRUE);
 
-    // Ensure leading slash.
-    if (!str_starts_with($path, '/')) {
-      $path = '/' . $path;
-    }
+    $aliasManager = $this->createMock(AliasManagerInterface::class);
+    $aliasManager->method('getPathByAlias')->willReturn('/node/1');
+    $aliasManager->method('getAliasByPath')->willReturn('/about-us');
 
-    // Remove query string.
-    if (str_contains($path, '?')) {
-      $path = strstr($path, '?', TRUE);
-    }
+    $pathValidator = $this->createMock(PathValidatorInterface::class);
+    $pathValidator->method('getUrlIfValid')->willReturn($this->createUrl('entity.node.canonical', ['node' => $entity]));
 
-    // Remove fragment.
-    if (str_contains($path, '#')) {
-      $path = strstr($path, '#', TRUE);
-    }
+    $languageManager = $this->createMock(LanguageManagerInterface::class);
+    $default = $this->createMock(LanguageInterface::class);
+    $default->method('getId')->willReturn('en');
+    $languageManager->method('getDefaultLanguage')->willReturn($default);
 
-    // Remove trailing slash (except for root).
-    if ($path !== '/' && str_ends_with($path, '/')) {
-      $path = rtrim($path, '/');
-    }
+    $moduleHandler = $this->createMock(ModuleHandlerInterface::class);
+    $moduleHandler->method('moduleExists')->willReturn(FALSE);
 
-    $this->assertEquals($expected, $path);
-  }
+    $configFactory = $this->createConfigFactory([
+      'resolver.langcode_fallback' => 'site_default',
+      'enable_all' => TRUE,
+    ]);
 
-  /**
-   * Data provider for testPathNormalization.
-   */
-  public static function pathNormalizationProvider(): array {
-    return [
-      'simple path' => ['/about-us', '/about-us'],
-      'path without slash' => ['about-us', '/about-us'],
-      'path with query' => ['/about-us?foo=bar', '/about-us'],
-      'path with fragment' => ['/about-us#section', '/about-us'],
-      'path with trailing slash' => ['/about-us/', '/about-us'],
-      'root path' => ['/', '/'],
-      'complex path' => ['/blog/2024/my-post?ref=home#comments', '/blog/2024/my-post'],
-    ];
+    $requestStack = $this->createMock(RequestStack::class);
+
+    $resolver = new PathResolver(
+      $entityTypeManager,
+      $aliasManager,
+      $pathValidator,
+      $languageManager,
+      $moduleHandler,
+      $configFactory,
+      $requestStack,
+      NULL,
+    );
+
+    $result = $resolver->resolve('/about-us');
+    $this->assertTrue($result['resolved']);
+    $this->assertSame('entity', $result['kind']);
   }
 
 }
