@@ -33,7 +33,7 @@ jobs:
       SIMPLETEST_DB: "sqlite://localhost/sites/default/files/db.sqlite"
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: shivammathur/setup-php@v2
         with:
@@ -69,4 +69,3 @@ jobs:
         run: |
           cd drupal/web
           ../vendor/bin/phpunit -c core modules/contrib/jsonapi_frontend/tests
-
