@@ -20,7 +20,7 @@ use Symfony\Component\HttpFoundation\Request;
  */
 final class RoutesFeedController extends ControllerBase {
 
-  private const CONTENT_TYPE = 'application/vnd.api+json; charset=utf-8';
+  private const CONTENT_TYPE = 'application/json; charset=utf-8';
 
   public function __construct(
     private readonly RoutesFeedBuilder $routesFeedBuilder,

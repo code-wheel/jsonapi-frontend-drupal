@@ -45,7 +45,7 @@ jobs:
             coverage: false
 
     env:
-      SIMPLETEST_BASE_URL: "http://127.0.0.1"
+      SIMPLETEST_BASE_URL: "http://127.0.0.1:8888"
       SIMPLETEST_DB: "sqlite://localhost/sites/default/files/db.sqlite"
 
     steps:
@@ -82,6 +82,12 @@ jobs:
           chmod -R 777 drupal/web/sites/default/files
           chmod -R 777 drupal/web/sites/simpletest/browser_output
 
+      - name: Start test webserver
+        run: |
+          cd drupal/web
+          php -S 127.0.0.1:8888 .ht.router.php >/tmp/php-server.log 2>&1 &
+          echo $! > /tmp/php-server.pid
+
       - name: Run PHPUnit
         if: ${{ !matrix.coverage }}
         run: |
@@ -115,3 +121,10 @@ jobs:
           flags: phpunit,drupal
           fail_ci_if_error: false
           verbose: true
+
+      - name: Stop test webserver
+        if: always()
+        run: |
+          if [ -f /tmp/php-server.pid ]; then
+            kill "$(cat /tmp/php-server.pid)" || true
+          fi
