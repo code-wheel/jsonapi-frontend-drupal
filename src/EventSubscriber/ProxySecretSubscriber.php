@@ -102,7 +102,7 @@ final class ProxySecretSubscriber implements EventSubscriberInterface {
           ],
         ],
       ], 403, [
-        'Content-Type' => 'application/vnd.api+json; charset=utf-8',
+        'Content-Type' => 'application/json; charset=utf-8',
       ]);
 
       $event->setResponse($response);
