@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\jsonapi_frontend\Kernel;
 
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PHPUnit\Framework\Attributes\Group;
+use Drupal\jsonapi_frontend\Controller\PathResolverController;
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\Core\Session\AnonymousUserSession;
 use Drupal\node\Entity\Node;
@@ -16,7 +19,8 @@ use Symfony\Component\HttpFoundation\Request;
  *
  * @group jsonapi_frontend
  */
-#[\PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses]
+#[RunTestsInSeparateProcesses]
+#[Group('jsonapi_frontend')]
 class PathResolutionTest extends KernelTestBase {
 
   /**
@@ -208,7 +212,7 @@ class PathResolutionTest extends KernelTestBase {
     ]);
     $node->save();
 
-    $controller = \Drupal\jsonapi_frontend\Controller\PathResolverController::create($this->container);
+    $controller = PathResolverController::create($this->container);
     $request = Request::create('/jsonapi/resolve', 'GET', [
       'path' => '/about-us',
       '_format' => 'json',
@@ -227,7 +231,7 @@ class PathResolutionTest extends KernelTestBase {
    * Tests the /jsonapi/resolve controller returns a JSON:API error for missing path.
    */
   public function testResolveControllerMissingPathReturns400(): void {
-    $controller = \Drupal\jsonapi_frontend\Controller\PathResolverController::create($this->container);
+    $controller = PathResolverController::create($this->container);
     $request = Request::create('/jsonapi/resolve', 'GET', [
       '_format' => 'json',
     ]);
@@ -258,7 +262,7 @@ class PathResolutionTest extends KernelTestBase {
       ->set('resolver.cache_max_age', 60)
       ->save();
 
-    $controller = \Drupal\jsonapi_frontend\Controller\PathResolverController::create($this->container);
+    $controller = PathResolverController::create($this->container);
     $request = Request::create('/jsonapi/resolve', 'GET', [
       'path' => '/about-us',
       '_format' => 'json',

@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\jsonapi_frontend\Kernel;
 
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PHPUnit\Framework\Attributes\Group;
+use Drupal\jsonapi_frontend\Form\SettingsForm;
 use Drupal\Core\Form\FormState;
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\node\Entity\NodeType;
@@ -14,7 +17,8 @@ use Drupal\user\Entity\User;
  *
  * @group jsonapi_frontend
  */
-#[\PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses]
+#[RunTestsInSeparateProcesses]
+#[Group('jsonapi_frontend')]
 final class SettingsFormNoJsonapiViewsTest extends KernelTestBase {
 
   /**
@@ -60,7 +64,7 @@ final class SettingsFormNoJsonapiViewsTest extends KernelTestBase {
   }
 
   public function testBuildFormShowsJsonapiViewsInstallNotice(): void {
-    $form_object = \Drupal\jsonapi_frontend\Form\SettingsForm::create($this->container);
+    $form_object = SettingsForm::create($this->container);
     $form_state = new FormState();
 
     $form = $form_object->buildForm([], $form_state);

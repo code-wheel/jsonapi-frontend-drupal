@@ -51,3 +51,12 @@ services:
   logger.channel.jsonapi_frontend:
     parent: logger.channel_base
     arguments: ['jsonapi_frontend']
+
+  Drupal\jsonapi_frontend\Hook\JsonapiFrontendHooks:
+    class: Drupal\jsonapi_frontend\Hook\JsonapiFrontendHooks
+    arguments:
+      - '@config.factory'
+      - '@module_handler'
+      - '@event_dispatcher'
+      - '@logger.factory'
+      - '@jsonapi_frontend.secret_manager'

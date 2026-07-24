@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\jsonapi_frontend\Unit;
 
+use PHPUnit\Framework\Attributes\Group;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityStorageInterface;
@@ -25,6 +26,7 @@ use Psr\Log\LoggerInterface;
  * @group jsonapi_frontend
  * @coversDefaultClass \Drupal\jsonapi_frontend\Service\RoutesFeedBuilder
  */
+#[Group('jsonapi_frontend')]
 final class RoutesFeedBuilderUnitTest extends UnitTestCase {
 
   private function createConfigFactory(array $values): ConfigFactoryInterface {

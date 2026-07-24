@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\jsonapi_frontend\Kernel;
 
+use PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses;
+use PHPUnit\Framework\Attributes\Group;
+use Drupal\jsonapi_frontend\Controller\RoutesFeedController;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
@@ -22,7 +25,8 @@ use Symfony\Component\HttpFoundation\Request;
  *
  * @group jsonapi_frontend
  */
-#[\PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses]
+#[RunTestsInSeparateProcesses]
+#[Group('jsonapi_frontend')]
 final class RoutesFeedControllerTest extends KernelTestBase {
 
   /**
@@ -48,7 +52,7 @@ final class RoutesFeedControllerTest extends KernelTestBase {
       ->set('routes.enabled', FALSE)
       ->save();
 
-    $controller = \Drupal\jsonapi_frontend\Controller\RoutesFeedController::create($this->container);
+    $controller = RoutesFeedController::create($this->container);
     $request = Request::create('/jsonapi/routes', 'GET', [
       '_format' => 'json',
     ]);
@@ -66,7 +70,7 @@ final class RoutesFeedControllerTest extends KernelTestBase {
     $secrets = $this->container->get('jsonapi_frontend.secret_manager');
     $secrets->setRoutesFeedSecret('');
 
-    $controller = \Drupal\jsonapi_frontend\Controller\RoutesFeedController::create($this->container);
+    $controller = RoutesFeedController::create($this->container);
     $request = Request::create('/jsonapi/routes', 'GET', [
       '_format' => 'json',
     ]);
@@ -84,7 +88,7 @@ final class RoutesFeedControllerTest extends KernelTestBase {
     $secrets = $this->container->get('jsonapi_frontend.secret_manager');
     $secrets->setRoutesFeedSecret('expected');
 
-    $controller = \Drupal\jsonapi_frontend\Controller\RoutesFeedController::create($this->container);
+    $controller = RoutesFeedController::create($this->container);
     $request = Request::create('/jsonapi/routes', 'GET', [
       '_format' => 'json',
     ]);
@@ -187,7 +191,7 @@ final class RoutesFeedControllerTest extends KernelTestBase {
 
     $this->container->set('jsonapi_frontend.routes_feed_builder', $builder);
 
-    $controller = \Drupal\jsonapi_frontend\Controller\RoutesFeedController::create($this->container);
+    $controller = RoutesFeedController::create($this->container);
     $request = Request::create('/jsonapi/routes', 'GET', [
       '_format' => 'json',
       'page' => [

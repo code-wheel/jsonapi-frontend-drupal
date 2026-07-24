@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\jsonapi_frontend\Unit;
 
+use PHPUnit\Framework\Attributes\Group;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Config\StorageInterface;
 use Drupal\Core\Entity\EntityInterface;
@@ -23,6 +24,7 @@ use Psr\Http\Message\ResponseInterface;
  * @group jsonapi_frontend
  * @coversDefaultClass \Drupal\jsonapi_frontend\EventSubscriber\RevalidationSubscriber
  */
+#[Group('jsonapi_frontend')]
 final class RevalidationSubscriberTest extends UnitTestCase {
 
   private function createConfigFactory(array $values): ConfigFactoryInterface {

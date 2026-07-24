@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\jsonapi_frontend\Unit;
 
+use PHPUnit\Framework\Attributes\Group;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\ContentEntityInterface;
 use Drupal\Core\Entity\EntityInterface;
@@ -24,6 +25,7 @@ use Symfony\Component\HttpFoundation\RequestStack;
  * @group jsonapi_frontend
  * @coversDefaultClass \Drupal\jsonapi_frontend\Service\PathResolver
  */
+#[Group('jsonapi_frontend')]
 final class PathResolverInternalsTest extends UnitTestCase {
 
   private function createConfigFactory(array $values): ConfigFactoryInterface {

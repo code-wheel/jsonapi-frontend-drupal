@@ -2,73 +2,27 @@
 
 /**
  * @file
- * Install, update, and uninstall functions for JSON:API Frontend.
+ * Install, update and uninstall functions for JSON:API Frontend.
  */
 
 declare(strict_types=1);
 
+use Drupal\Core\Hook\Attribute\LegacyRequirementsHook;
+use Drupal\Core\Url;
+use Drupal\jsonapi_frontend\Hook\JsonapiFrontendHooks;
+
 /**
  * Implements hook_requirements().
+ *
+ * LegacyRequirementsHook shim for Drupal 10/11.x; Drupal 11.2+ and 12 use
+ * JsonapiFrontendHooks::runtimeRequirements() directly.
  */
-#[\Drupal\Core\Hook\Attribute\LegacyRequirementsHook]
+#[LegacyRequirementsHook]
 function jsonapi_frontend_requirements(string $phase): array {
-  $requirements = [];
-
-  if ($phase === 'runtime') {
-    $config = \Drupal::config('jsonapi_frontend.settings');
-    /** @var \Drupal\jsonapi_frontend\Service\SecretManager $secret_manager */
-    $secret_manager = \Drupal::service('jsonapi_frontend.secret_manager');
-
-    // Check if revalidation is enabled but URL is not configured.
-    if ($config->get('revalidation.enabled') && empty($config->get('revalidation.url'))) {
-      $requirements['jsonapi_frontend_revalidation'] = [
-        'title' => t('JSON:API Frontend Cache Revalidation'),
-        'value' => t('Not configured'),
-        'description' => t('Cache revalidation is enabled but no webhook URL is configured. <a href=":url">Configure the webhook URL</a>.', [
-          ':url' => \Drupal\Core\Url::fromRoute('jsonapi_frontend.settings')->toString(),
-        ]),
-        'severity' => REQUIREMENT_WARNING,
-      ];
-    }
-
-    // Check if Next.js First mode is enabled but no proxy secret.
-    if ($config->get('deployment_mode') === 'nextjs_first' && $secret_manager->getProxySecret() === '') {
-      $requirements['jsonapi_frontend_proxy_secret'] = [
-        'title' => t('JSON:API Frontend Origin Protection'),
-        'value' => t('Not configured'),
-        'description' => t('Next.js First mode is enabled but no proxy secret is configured. This leaves your Drupal origin unprotected. <a href=":url">Configure a proxy secret</a>.', [
-          ':url' => \Drupal\Core\Url::fromRoute('jsonapi_frontend.settings')->toString(),
-        ]),
-        'severity' => REQUIREMENT_WARNING,
-      ];
-    }
-
-    // Check if routes feed is enabled but no routes secret.
-    if ($config->get('routes.enabled') && $secret_manager->getRoutesFeedSecret() === '') {
-      $requirements['jsonapi_frontend_routes_secret'] = [
-        'title' => t('JSON:API Frontend Routes Feed'),
-        'value' => t('Not configured'),
-        'description' => t('Routes feed is enabled but no routes feed secret is configured. This endpoint requires a secret header to work. <a href=":url">Configure a routes feed secret</a>.', [
-          ':url' => \Drupal\Core\Url::fromRoute('jsonapi_frontend.settings')->toString(),
-        ]),
-        'severity' => REQUIREMENT_WARNING,
-      ];
-    }
-
-    // Check if jsonapi_views is installed for views support.
-    if (!\Drupal::moduleHandler()->moduleExists('jsonapi_views')) {
-      $requirements['jsonapi_frontend_views'] = [
-        'title' => t('JSON:API Frontend Views Support'),
-        'value' => t('jsonapi_views not installed'),
-        'description' => t('For Views support in your headless frontend, install the <a href=":url">jsonapi_views</a> module.', [
-          ':url' => 'https://www.drupal.org/project/jsonapi_views',
-        ]),
-        'severity' => REQUIREMENT_INFO,
-      ];
-    }
+  if ($phase !== 'runtime') {
+    return [];
   }
-
-  return $requirements;
+  return \Drupal::service(JsonapiFrontendHooks::class)->runtimeRequirements();
 }
 
 /**
@@ -76,7 +30,7 @@ function jsonapi_frontend_requirements(string $phase): array {
  */
 function jsonapi_frontend_install(): void {
   \Drupal::messenger()->addStatus(t('JSON:API Frontend installed. <a href=":url">Configure your headless settings</a>.', [
-    ':url' => \Drupal\Core\Url::fromRoute('jsonapi_frontend.settings')->toString(),
+    ':url' => Url::fromRoute('jsonapi_frontend.settings')->toString(),
   ]));
 }
 
@@ -86,33 +40,4 @@ function jsonapi_frontend_install(): void {
 function jsonapi_frontend_uninstall(): void {
   // Configuration is automatically deleted by Drupal.
   \Drupal::messenger()->addStatus(t('JSON:API Frontend has been uninstalled.'));
-}
-
-/**
- * Migrate secrets out of config storage.
- */
-function jsonapi_frontend_update_10001(): void {
-  $config = \Drupal::configFactory()->getEditable('jsonapi_frontend.settings');
-  $state = \Drupal::state();
-
-  $proxy_secret = trim((string) ($config->get('proxy_secret') ?? ''));
-  if ($proxy_secret !== '' && trim((string) ($state->get('jsonapi_frontend.proxy_secret') ?? '')) === '') {
-    $state->set('jsonapi_frontend.proxy_secret', $proxy_secret);
-  }
-
-  $routes_secret = trim((string) ($config->get('routes.secret') ?? ''));
-  if ($routes_secret !== '' && trim((string) ($state->get('jsonapi_frontend.routes_secret') ?? '')) === '') {
-    $state->set('jsonapi_frontend.routes_secret', $routes_secret);
-  }
-
-  $revalidation_secret = trim((string) ($config->get('revalidation.secret') ?? ''));
-  if ($revalidation_secret !== '' && trim((string) ($state->get('jsonapi_frontend.revalidation_secret') ?? '')) === '') {
-    $state->set('jsonapi_frontend.revalidation_secret', $revalidation_secret);
-  }
-
-  // Clear stored config values to avoid accidental leaks via config export.
-  $config->set('proxy_secret', '');
-  $config->set('routes.secret', '');
-  $config->set('revalidation.secret', '');
-  $config->save();
 }

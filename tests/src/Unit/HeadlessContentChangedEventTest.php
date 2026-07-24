@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\jsonapi_frontend\Unit;
 
+use PHPUnit\Framework\Attributes\Group;
 use Drupal\Core\Entity\EntityInterface;
 use Drupal\jsonapi_frontend\Event\HeadlessContentChangedEvent;
 use Drupal\Tests\UnitTestCase;
@@ -14,6 +15,7 @@ use Drupal\Tests\UnitTestCase;
  * @group jsonapi_frontend
  * @coversDefaultClass \Drupal\jsonapi_frontend\Event\HeadlessContentChangedEvent
  */
+#[Group('jsonapi_frontend')]
 final class HeadlessContentChangedEventTest extends UnitTestCase {
 
   public function testAccessorsAndMutators(): void {

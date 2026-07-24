@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Drupal\Tests\jsonapi_frontend\Unit;
 
+use PHPUnit\Framework\Attributes\Group;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Config\StorageInterface;
 use Drupal\Core\State\StateInterface;
@@ -16,6 +17,7 @@ use Drupal\Tests\UnitTestCase;
  * @group jsonapi_frontend
  * @coversDefaultClass \Drupal\jsonapi_frontend\Service\SecretManager
  */
+#[Group('jsonapi_frontend')]
 final class SecretManagerTest extends UnitTestCase {
 
   private function createConfigFactory(array $values): ConfigFactoryInterface {
